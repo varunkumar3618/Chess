@@ -1,8 +1,9 @@
+import random
 import chess, chess.uci
 
 def baselinePolicy(board):
-    for move in board.legal_moves:
-        return move
+    legal_moves = list(board.legal_moves)
+    return random.choice(legal_moves)
 
 def playAgainstEngine(
         policy,
