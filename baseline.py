@@ -9,7 +9,7 @@ def playAgainstEngine(
         board=chess.Board(),
         engineFile="./stockfish",
         playAsWhite=True,
-        engineMovetime=2000):
+        engineMovetime=20):
     """
     Arguments:
         policy: A function that takes board positions and returns a legal move.
@@ -29,7 +29,7 @@ def playAgainstEngine(
             move = policy(board)
         else:
             engine.position(board)
-            move = engine.go(engineMovetime)
+            move = engine.go(movetime=engineMovetime)[0]
         board.push(move)
         policyPlays = not policyPlays
 
