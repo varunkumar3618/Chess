@@ -1,4 +1,5 @@
 import chess
+import numpy as np
 
 PIECE_TYPES = [chess.ROOK, chess.KNIGHT, chess.BISHOP, chess.QUEEN, chess.KING, chess.PAWN]
 DEFAULT_PIECE_SCORES = {
@@ -10,32 +11,39 @@ DEFAULT_PIECE_SCORES = {
     chess.PAWN: 1
 }
 
-class Features(object):
-    def __init__(self, board=None):
-        if board is None:
-            board = chess.Board()
-        self.board = board
+def piece_counts(board, player):
+    return {
+        piece: len(board.pieces(piece, player))
+        for piece in PIECE_TYPES
+    }
 
-    def push(self, move):
-        self.board.push(move)
+def material_value_of_player(board, player, scores=DEFAULT_PIECE_SCORES):
+    value = 0
+    counts = piece_counts(board, player)
+    for piece in PIECE_TYPES:
+        value += counts[piece] * scores[piece]
+    return value
 
-    def pop(self):
-        self.board.pop()
+def material_value(board):
+    other = chess.BLACK if board.turn is chess.WHITE else chess.WHITE
+    return material_value_of_player(board, board.turn) - material_value_of_player(board, other)
 
-    def piece_counts(self, player):
-        return {
-            piece: len(self.board.pieces(piece, player))
-            for piece in PIECE_TYPES
-        }
+class Feature(object):
+    def shape(self):
+        pass
+    def value(self, state):
+        pass
 
-    def material_value_of_player(self, player, scores=DEFAULT_PIECE_SCORES):
-        value = 0
-        counts = self.piece_counts(player)
+class Counts(object):
+    def shape(self):
+        return (12,)
+    def value(self, state):
+        board = state.getBoard()
+        counts = []
+        whiteCounts = piece_counts(board, chess.WHITE)
         for piece in PIECE_TYPES:
-            value += counts[piece] * scores[piece]
-        return value
-
-    def material_value(self):
-        other = chess.BLACK if self.board.turn is chess.WHITE else chess.WHITE
-        return self.material_value_of_player(self.board.turn) - self.material_value_of_player(other)
-
+            counts.append(whiteCounts[piece])
+        blackCounts = piece_counts(board, chess.BLACK)
+        for piece in PIECE_TYPES:
+            counts.append(blackCounts[piece])
+        return np.array(counts, dtype='float32')
