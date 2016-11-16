@@ -36,7 +36,7 @@ class TDLambdaAgent(Agent):
         self.features = features
         self.weights = {}
         for feature in self.features:
-            self.weights[feature] = np.zeros(feature.shape, dtype='float32')
+            self.weights[feature] = np.random.normal(size=feature.shape).astype('float32')
         self.depth = depth
 
         def valueFunction(state):
@@ -60,7 +60,7 @@ class TDLambdaAgent(Agent):
         self.tdLambda.incorporateFeedback(state, reward, newState)
 
     def _computeValue(self, state):
-        value = sum(np.sum(weight * feature.value(state) for feature, weight in self.weights.items()))
+        value = sum(np.sum(weight * feature.value(state)) for feature, weight in self.weights.items())
         if state.getAgentNo() == self.agentNo:
             return value
         else:

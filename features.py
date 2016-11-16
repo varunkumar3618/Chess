@@ -34,6 +34,8 @@ class Feature(object):
         pass
     def value(self, state):
         pass
+    def initial_weight(self):
+        raise NotImplementedError('Numpy array.')
 
 class Counts(object):
     @property
@@ -49,3 +51,16 @@ class Counts(object):
         for piece in PIECE_TYPES_WITHOUT_KING:
             counts.append(blackCounts[piece])
         return np.array(counts, dtype='float32')
+
+class PawnOccupation(object):
+    @property
+    def shape(self):
+        return (8, 8)
+    def value(self, state):
+        value = np.zeros(64, dtype='float32')
+        board = state.getBoard()
+        for square in board.pieces(chess.PAWN, chess.WHITE):
+            value[square] = 1.
+        for square in board.pieces(chess.PAWN, chess.BLACK):
+            value[square] = -1.
+        return value.reshape((8, 8))

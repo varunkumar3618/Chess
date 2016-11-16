@@ -49,6 +49,54 @@ class MinimaxSearch(SearchAlgorithm):
             self.cache[key] = result
         return self.cache[key]
 
+class MinimaxSearchWithAlphaBeta(SearchAlgorithm):
+    def __init__(self):
+        self.valueFunction = None
+        self.cache = None
+        self.configured = False
+
+    def configure(self, valueFunction):
+        if self.configured:
+            raise ValueError('Already configured.')
+        self.valueFunction = valueFunction
+        self.cache = {}
+        self.configured = True
+
+    def principalVariationPath(self, state, depth):
+        if not self.configured:
+            raise ValueError('The search algorithm must be configured with a value function.')
+        return list(reversed(self._principalVariationPath(state, depth, True, -float('inf'), float('inf'))[1]))
+
+    def _principalVariationPath(self, state, depth, maximize, alpha, beta):
+        key = (state, depth, maximize, alpha, beta)
+        if key not in self.cache:
+            if state.isEnd():
+                result = (state.getScore(), [])
+            elif depth == 0:
+                result = (self.valueFunction(state), [])
+            elif maximize:
+                valuesAndSuccessors = []
+                for action in state.getActions():
+                    successor = state.generateSuccessor(action)
+                    value, trace = self._principalVariationPath(successor, depth, False, alpha, beta)
+                    valuesAndSuccessors.append((value, trace + [(successor, action)]))
+                    alpha = max(alpha, value)
+                    if beta <= alpha:
+                        return max(valuesAndSuccessors)
+                result = max(valuesAndSuccessors)
+            else:
+                valuesAndSuccessors = []
+                for action in state.getActions():
+                    successor = state.generateSuccessor(action)
+                    value, trace = self._principalVariationPath(successor, depth - 1, True, alpha, beta)
+                    valuesAndSuccessors.append((value, trace + [(successor, action)]))
+                    beta = min(beta, value)
+                    if beta <= alpha:
+                        return min(valuesAndSuccessors)
+                result = min(valuesAndSuccessors)
+            self.cache[key] = result
+        return self.cache[key]
+
 def tictactoeTest():
     class State(object):
         cache = {}
@@ -114,11 +162,12 @@ def tictactoeTest():
             return state.getScore()
         else:
             return 0
-    search = MinimaxSearch()
-    search.configure(valueFunction)
-    result = search.principalVariationPath(State(np.zeros((3, 3), dtype='int'), 'x'), 6)
-    finalState = result[-1][0]
-    assert finalState.full() and not finalState.crossWin() and not finalState.circleWin()
+
+    for search in [MinimaxSearch(), MinimaxSearchWithAlphaBeta()]:
+        search.configure(valueFunction)
+        result = search.principalVariationPath(State(np.zeros((3, 3), dtype='int'), 'x'), 6)
+        finalState = result[-1][0]
+        assert finalState.full() and not finalState.crossWin() and not finalState.circleWin()
 
 def prisonersTest():
     states_strs = ['', 'c', 'd', 'cd', 'cc', 'dc', 'dd']
@@ -154,11 +203,12 @@ def prisonersTest():
             return isinstance(other, State) and self.state_string == other.state_string
     def valueFunction(state):
         return values[state.state_string]
-    search = MinimaxSearch()
-    search.configure(valueFunction)
-    result = search.principalVariationPath(State(''), 1)
-    expected = [(State('c'), 'c'), (State('cc'), 'c')]
-    assert result == expected, 'Expected: %s, Found: %s' % (expected, result)
+
+    for search in [MinimaxSearch(), MinimaxSearchWithAlphaBeta()]:
+        search.configure(valueFunction)
+        result = search.principalVariationPath(State(''), 1)
+        expected = [(State('c'), 'c'), (State('cc'), 'c')]
+        assert result == expected, 'Expected: %s, Found: %s' % (expected, result)
 
 def test():
     prisonersTest()
