@@ -54,3 +54,11 @@ class ChessGameState(TwoPlayerGameState):
                 return 0
         else:
             return 0
+
+    def __hash__(self):
+        return hash('%s, %s' % (self.board.fen(), self.SCORE_WIN))
+
+    def __eq__(self, other):
+        return isinstance(other, ChessGameState)\
+            and self.board.fen() == other.board.fen()\
+            and self.SCORE_WIN == other.SCORE_WIN
