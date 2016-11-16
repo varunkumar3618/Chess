@@ -1,30 +1,44 @@
 import chess
-import copy
 
-class GameState():
-    def __init__(self, board=chess.Board(), SCORE_WIN=1000):
+class TwoPlayerGameState(object):
+    def isEnd(self):
+        raise NotImplementedError("Bool.")
+
+    def getAgentNo(self):
+        raise NotImplementedError("Agent.")
+
+    def getActions(self):
+        raise NotImplementedError("Actions.")
+
+    def generateSuccessor(self, action):
+        raise NotImplementedError("TwoPlayerGameState")
+
+    def getScore(self):
+        raise NotImplementedError("Int.")
+
+class ChessGameState(TwoPlayerGameState):
+    def __init__(self, board=None, SCORE_WIN=1000):
+        if board is None:
+            board = chess.Board()
         self.board = board
         self.SCORE_WIN = SCORE_WIN
 
     def isEnd(self):
         return self.board.is_game_over()
 
-    def getAgent(self):
-        return 0 if self.board.turn == chess.WHITE else 1
+    def getAgentNo(self):
+        return self.board.turn
 
     def getBoard(self):
         return self.board
 
-    def getLegalActions(self):
+    def getActions(self):
         return list(self.board.legal_moves)
 
     def generateSuccessor(self, action):
-        newBoard = copy.deepcopy(self.board)
+        newBoard = chess.Board(fen=self.board.fen())
         newBoard.push(action)
-        return GameState(newBoard)
-
-    def getNumAgents(self):
-        return 2
+        return ChessGameState(newBoard)
 
     def getScore(self):
         """
