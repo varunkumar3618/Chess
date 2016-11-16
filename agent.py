@@ -41,7 +41,7 @@ class TDLambdaAgent(Agent):
 
         def valueFunction(state):
             return self._computeValue(state)
-        self.valueFunction = valueFunction
+        self.search.configure(valueFunction)
 
         def backupFunction(state, scale):
             self._backup(state, scale)
@@ -53,7 +53,7 @@ class TDLambdaAgent(Agent):
         self.tdLambda.beginEpisode()
 
     def getAction(self, state):
-        principalVariationPath = self.search.principalVariationPath(self.valueFunction, state, self.depth)
+        principalVariationPath = self.search.principalVariationPath(state, self.depth)
         return principalVariationPath[0][-1]
 
     def incorporateFeedback(self, state, action, reward, newState):
