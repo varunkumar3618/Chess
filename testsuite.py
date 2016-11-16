@@ -1,16 +1,16 @@
 import chess
 
 class TestSuite(object):
-    def __init__(self, engine):
-        self.engine = engine
+    def __init__(self, engineContainer):
+        self.engineContainer = engineContainer
 
     def run(self, engineMoveTime):
         # return a dictionary of {suitename: list of (move, bestMove) pairs}
         raise NotImplementedError("Override me!")
 
 class EPDTestSuite(TestSuite):
-    def __init__(self, engine, filenames):
-        super(EPDTestSuite, self).__init__(engine)
+    def __init__(self, engineContainer, filenames):
+        super(EPDTestSuite, self).__init__(engineContainer)
         # epdFiles is a dictionary of {filename: [lines in file]}
         self.epdFiles = {}
         for filename in filenames:
@@ -29,9 +29,9 @@ class EPDTestSuite(TestSuite):
     def testEPD(self, epdLine, engineMoveTime):
         position = chess.Board()
         epdInfo = position.set_epd(epdLine)
-        self.engine.ucinewgame()
-        self.engine.position(position)
-        move = self.engine.go(movetime=engineMoveTime)[0]
+        self.engineContainer.newGame()
+        self.engineContainer.position(position)
+        move = self.engineContainer.go(moveTime=engineMoveTime)[0]
         bestMove = epdInfo["bm"][0]
         return (move, bestMove)
 
@@ -43,7 +43,7 @@ class EPDTestSuite(TestSuite):
             movePairs = []
             for testNumber, epdLine in enumerate(lines):
                 move, bestMove = self.testEPD(epdLine, engineMoveTime)
-                self.showMoveResult(testNumber, move, bestMove)
+                self.showMoveResult(testNumber + 1, move, bestMove)
                 movePairs.append((move, bestMove))
             results[filename] = movePairs
         return results
