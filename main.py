@@ -35,6 +35,6 @@ def playGame(whiteAgent, blackAgent, maxMoveCount=100, numTrials=50, verbose=Tru
 
 if __name__ == '__main__':
     protagonistAgent = TDLambdaAgent(MinimaxSearch(), [Counts()], 0.7)
-    antagonistAgent = UCIChessAgent(engineFile="./stockfish", engineMoveTime=30)
+    antagonistAgent = UCIChessAgent(engineFile="./engines/stockfish", engineMoveTime=30)
 
     playGame(protagonistAgent, antagonistAgent, maxMoveCount=100, numTrials=50, verbose=False)
