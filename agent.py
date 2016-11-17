@@ -19,7 +19,7 @@ class UCIChessAgent(Agent):
         self.engine.uci()
         self.engineMoveTime = engineMoveTime
     def beginEpisode(self, state, params):
-        pass
+        self.engine.ucinewgame()
     def getAction(self, state):
         self.engine.position(state.getBoard())
         return self.engine.go(movetime=self.engineMoveTime)[0]
