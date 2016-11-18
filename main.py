@@ -3,6 +3,7 @@ from agent import UCIChessAgent, TDLambdaAgent
 from features import Counts, PawnOccupation
 from search import MinimaxSearch, MinimaxSearchWithAlphaBeta
 from gamestate import ChessGameState
+from mtdagent import Agent
 
 def playGame(whiteAgent, blackAgent, maxMoveCount=100, numTrials=50, verbose=True, board=None):
     state = ChessGameState(board=board)
@@ -36,7 +37,7 @@ def playGame(whiteAgent, blackAgent, maxMoveCount=100, numTrials=50, verbose=Tru
             print 'Action: %s, white reward: %s, state: %s' % t
 
 if __name__ == '__main__':
-    protagonistAgent = TDLambdaAgent(MinimaxSearchWithAlphaBeta(), [Counts(), PawnOccupation()], 0.7, depth=2)
+    protagonistAgent = Agent()
     antagonistAgent = UCIChessAgent(engineFile="./engines/stockfish", engineMoveTime=30)
 
     playGame(protagonistAgent, antagonistAgent, maxMoveCount=100, numTrials=50, verbose=False)
