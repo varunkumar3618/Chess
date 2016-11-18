@@ -28,7 +28,7 @@ class EPDTestSuite(TestSuite):
     def showMoveResult(self, testNumber, move, bestMove):
         print "Test ", testNumber
         if move == bestMove:
-            print "Correct!"
+            print "Correct! ({})".format(bestMove)
         else:
             print "Best:\t", bestMove
             print "Chose:\t", move

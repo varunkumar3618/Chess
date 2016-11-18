@@ -4,15 +4,18 @@ import argparse
 
 from testsuite import EPDTestSuite
 from agent import UCIChessAgent, TDLambdaAgent
+from sunfishagent import SunfishAgent
 
 from features import Counts, PawnOccupation
 from search import MinimaxSearchWithAlphaBeta
 
 ROOT_PATH = path.dirname(path.realpath(__file__))
 
+# Add agents to this dictionary to make them available in the test runner
 AGENT_CONSTRUCTORS = {
     "stockfish": lambda: UCIChessAgent(path.join(ROOT_PATH, "engines", "stockfish"), engineMoveTime=1),
-    "tdlambda": lambda: TDLambdaAgent(MinimaxSearchWithAlphaBeta(), [Counts(), PawnOccupation()], 0.7, depth=2)
+    "tdlambda": lambda: TDLambdaAgent(MinimaxSearchWithAlphaBeta(), [Counts(), PawnOccupation()], 0.7, depth=2),
+    "sunfish": lambda: SunfishAgent(engineMoveTime=500)
 }
 
 def main(args):
