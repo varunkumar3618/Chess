@@ -131,19 +131,20 @@ class AlphaBetaAgent(object):
         self.killerCache[depth].insert(move)
 
     def _score(self, board):
-        return evaluate(board)
+        return evaluate(board) / float(1000)
 
     def _alphaBetaSearch(self, board, depth, alpha=-float('inf'), beta=float('inf')):
         key = BoardKey(board.fen(), board.zobrist_hash())
         if key in self.alphaBetaCache[depth]:
             lower, upper, move = self.alphaBetaCache[depth][key]
-            if lower >= beta:
+            if lower > beta:
                 return lower, None
-            elif upper <= alpha:
+            elif upper < alpha:
                 return upper, None
             alpha, beta = max(lower, alpha), min(upper, beta)
         else:
             lower, upper = -float('inf'), float('inf')
+        # lower, upper = -float('inf'), float('inf')
 
         if depth == 0:
             bestVal, bestMove = self._score(board), None
@@ -189,21 +190,51 @@ class AlphaBetaAgent(object):
         self.alphaBetaCache[depth][key] = (lower, upper, bestMove)
         return bestVal, bestMove
 
-    def _mtdfSearch(self, board, guess, depth):
+    def _mtdfSearch(self, board, guess, depth, resolution=0.001):
         lower, upper = -float('inf'), float('inf')
         move = None
+        searchPoint = guess
+        step = 100
+        result = None
+        checkpoint = (None, None)
 
         while lower < upper:
-            if guess == lower:
-                beta = guess + 1
+            print "------------------"
+            print lower, "(search at {})".format(searchPoint), upper
+            checkpoint = (result, move) # checkpoint to replay this step if it's bad
+            result, newMove = self._alphaBetaSearch(board, depth, searchPoint, searchPoint)
+            if newMove is None:
+                if move is not None:
+                    # Overshot alpha-beta bound; replay last step with smaller
+                    # step size
+                    step = (upper - lower) / float(2)
+                    if step > resolution:
+                        print "Enhance! Step", step
+                        result, move = checkpoint
+                    else:
+                        print "Overshot alpha-beta interval at min resolution"
+                        break # Implicitly keep last saved move
             else:
-                beta = guess
-            guess, move = self._alphaBetaSearch(board, depth, beta - 1, beta)
-            if guess < beta:
-                upper = guess
+                move = newMove
+
+            print "result: {} {}".format(result, newMove)
+            if result == searchPoint:
+                print "Search point exactly matches result"
+                break
+            elif result > searchPoint:
+                print "Guess was too low"
+                lower = result
+                searchPoint = lower + step
             else:
-                lower = guess
-        return guess, move
+                print "Guess was too high"
+                upper = result
+                searchPoint = upper - step
+        # Special case: 0-length interval (board's upper and lower bounds are equal)
+        if move is None:
+            _, move = self._alphaBetaSearch(board, depth, result, result)
+        print "Final interval", lower, upper
+        print "return", result, move
+        return result, move
 
     def _deepeningMTDFSearch(self, board, maxDepth=6):
         guess, move = 0, None
@@ -233,7 +264,8 @@ class UCIChessAgent(object):
 
 
 def simulate(whiteAgent, blackAgent, verbose=True):
-    board = chess.Board(fen="8/1pp4p/8/8/1Pb2nP1/p4Pk1/7r/2R4K w - - 4 33")
+    board = chess.Board()
+    # board = chess.Board(fen="8/1pp4p/8/8/1Pb2nP1/p4Pk1/7r/2R4K w - - 4 33")
     whiteAgent.beginGame()
     blackAgent.beginGame()
     while not board.is_game_over():
@@ -267,4 +299,4 @@ def launchPDB(sig, frame):
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, launchPDB)
     print(os.getpid())
-    simulate(AlphaBetaAgent(depth=4), UCIChessAgent('./engines/stockfish', 1))
+    simulate(AlphaBetaAgent(depth=4), UCIChessAgent('./engines/stockfish', 10))
