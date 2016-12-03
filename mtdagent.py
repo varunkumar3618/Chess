@@ -2,6 +2,13 @@
 
 import collections
 import chess, chess.uci
+from tdlearning import TDLambda
+from features import Feature
+import numpy as np
+
+# Take the dot product of two defaultdict(float)
+def dot(vector1, vector2):
+    return sum(vector1[key] * vector2[key] for key in vector1)
 
 MATE_VALUE = 60000 + 8*2700
 
@@ -71,7 +78,7 @@ VALUES = {
 # Evalutes the board from the perspective of the white player
 def evaluate(board):
     value = 0
-    for pieceType, valueBoard in VALUES.items():
+    for pieceType, _ in VALUES.items():
         for square in board.pieces(pieceType, chess.WHITE):
             value += VALUES[pieceType][square]
         for square in board.pieces(pieceType, chess.BLACK):
@@ -83,6 +90,12 @@ def evaluate(board):
             value -= MATE_VALUE
     return value
 
+class TableValue(Feature):
+    @property
+    def shape(self):
+        return (1,)
+    def value(self, board):
+        return evaluate(board) / float(10000)
 
 class BoardKey(object):
     def __init__(self, fen, zobrist):
@@ -110,14 +123,27 @@ class LRUCache(object):
         self.elems.append(elem)
 
 
-class AlphaBetaAgent(object):
-    def __init__(self, depth):
+class TDMTDAgent(object):
+    """
+    A TD-Lambda agent with MTD(f) search.
+    """
+    def __init__(self, depth, features, traceDecay=0.7, learningRate=0.001):
         self.depth = depth
         self.alphaBetaCache = collections.defaultdict(dict)
         self.killerCache = collections.defaultdict(lambda: LRUCache(2))
+        self.features = features
+        self.weights = {}
+        for feature in self.features:
+            self.weights[feature] = np.random.normal(size=feature.shape).astype('float32')
+
+        def valueClosure(board):
+            return self._score(board)
+        def backupClosure(board, scale):
+            self._backup(board, scale)
+        self.tdLambda = TDLambda(traceDecay, valueClosure, backupClosure, discount=1, alpha=learningRate)
 
     def beginGame(self):
-        pass
+        self.tdLambda.beginEpisode()
 
     def _getMoves(self, board, depth):
         legalMoves = set(board.generate_legal_moves())
@@ -133,7 +159,8 @@ class AlphaBetaAgent(object):
         self.killerCache[depth].insert(move)
 
     def _score(self, board):
-        return evaluate(board) / float(10000)
+        return sum(np.sum(weight * feature.value(board))
+                   for feature, weight in self.weights.items())
 
     def _alphaBetaSearch(self, board, depth, alpha=-float('inf'), beta=float('inf')):
         key = BoardKey(board.fen(), board.zobrist_hash())
@@ -235,6 +262,12 @@ class AlphaBetaAgent(object):
     def getMove(self, board):
         return self._deepeningMTDFSearch(board, self.depth)[1]
 
+    def incorporateFeedback(self, state, action, reward, newState):
+        self.tdLambda.incorporateFeedback(state, reward, newState)
+
+    def _backup(self, board, scale):
+        for feature in self.features:
+            self.weights[feature] += feature.value(board) * scale
 
 class UCIChessAgent(object):
     def __init__(self, engineFile, engineMoveTime):
@@ -298,4 +331,4 @@ def launchPDB(sig, frame):
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, launchPDB)
     print(os.getpid())
-    simulate(AlphaBetaAgent(depth=4), UCIChessAgent('./engines/stockfish', 10))
+    simulate(TDMTDAgent(depth=4, features=[TableValue()]), UCIChessAgent('./engines/stockfish', 10))
