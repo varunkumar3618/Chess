@@ -208,7 +208,12 @@ class AlphaBetaAgent(object):
     def _deepeningMTDFSearch(self, board, maxDepth=6):
         guess, move = 0, None
         for depth in range(1, maxDepth + 1):
-            guess, move = self._mtdfSearch(board, guess, depth)
+            nextGuess, nextMove = self._mtdfSearch(board, guess, depth)
+            if nextMove is not None:
+                guess, move = nextGuess, nextMove
+            else:
+                break
+        print guess, move
         return guess, move
 
     def getMove(self, board):
@@ -228,12 +233,13 @@ class UCIChessAgent(object):
 
 
 def simulate(whiteAgent, blackAgent, verbose=True):
-    board = chess.Board()
+    board = chess.Board(fen="8/1pp4p/8/8/1Pb2nP1/p4Pk1/7r/2R4K w - - 4 33")
     whiteAgent.beginGame()
     blackAgent.beginGame()
     while not board.is_game_over():
         if verbose:
             print board
+            print board.fen()
         if board.turn == chess.WHITE:
             move = whiteAgent.getMove(board)
         else:
@@ -249,5 +255,16 @@ def simulate(whiteAgent, blackAgent, verbose=True):
         print '================================'
     return board.result()
 
+import os
+import signal
+import sys
+import time
+
+def launchPDB(sig, frame):
+    import pdb
+    pdb.Pdb().set_trace(frame)
+
 if __name__ == '__main__':
+    signal.signal(signal.SIGINT, launchPDB)
+    print(os.getpid())
     simulate(AlphaBetaAgent(depth=4), UCIChessAgent('./engines/stockfish', 1))
