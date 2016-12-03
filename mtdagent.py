@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import collections
 import chess, chess.uci
 
@@ -131,7 +133,7 @@ class AlphaBetaAgent(object):
         self.killerCache[depth].insert(move)
 
     def _score(self, board):
-        return evaluate(board) / float(1000)
+        return evaluate(board) / float(10000)
 
     def _alphaBetaSearch(self, board, depth, alpha=-float('inf'), beta=float('inf')):
         key = BoardKey(board.fen(), board.zobrist_hash())
@@ -245,6 +247,20 @@ class UCIChessAgent(object):
         self.engine.position(board)
         return self.engine.go(movetime=self.engineMoveTime)[0]
 
+def renderBoard(board):
+    pieces = {'R':'♜', 'N':'♞', 'B':'♝', 'Q':'♛', 'K':'♚', 'P':'♟',
+              'r':'♖', 'n':'♘', 'b':'♗', 'q':'♕', 'k':'♔', 'p':'♙', '.':'·'}
+    fen = board.fen()
+    position = fen.split(" ")[0]
+    rows = position.split("/")
+    for row in rows:
+        rowString = ""
+        for pieceName in row:
+            if pieceName.isdigit():
+                rowString += "".join([". "] * int(pieceName))
+            else:
+                rowString += "{} ".format(pieces[pieceName])
+        print rowString
 
 def simulate(whiteAgent, blackAgent, verbose=True):
     board = chess.Board()
@@ -253,7 +269,7 @@ def simulate(whiteAgent, blackAgent, verbose=True):
     blackAgent.beginGame()
     while not board.is_game_over():
         if verbose:
-            print board
+            renderBoard(board)
             # print board.fen()
         if board.turn == chess.WHITE:
             move = whiteAgent.getMove(board)
@@ -265,8 +281,8 @@ def simulate(whiteAgent, blackAgent, verbose=True):
             print '-----------------------------'
         board.push(move)
     if verbose:
-        print board
-        print board.reset()
+        renderBoard(board)
+        board.reset()
         print '================================'
     return board.result()
 
