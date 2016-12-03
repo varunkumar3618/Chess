@@ -190,50 +190,33 @@ class AlphaBetaAgent(object):
         self.alphaBetaCache[depth][key] = (lower, upper, bestMove)
         return bestVal, bestMove
 
-    def _mtdfSearch(self, board, guess, depth, resolution=0.001):
+    def _mtdfSearch(self, board, guess, depth):
         lower, upper = -float('inf'), float('inf')
         move = None
         searchPoint = guess
         step = 100
         result = None
-        checkpoint = (None, None)
 
         while lower < upper:
-            print "------------------"
-            print lower, "(search at {})".format(searchPoint), upper
-            checkpoint = (result, move) # checkpoint to replay this step if it's bad
-            result, newMove = self._alphaBetaSearch(board, depth, searchPoint, searchPoint)
-            if newMove is None:
-                if move is not None:
-                    # Overshot alpha-beta bound; replay last step with smaller
-                    # step size
-                    step = (upper - lower) / float(2)
-                    if step > resolution:
-                        print "Enhance! Step", step
-                        result, move = checkpoint
-                    else:
-                        print "Overshot alpha-beta interval at min resolution"
-                        break # Implicitly keep last saved move
-            else:
-                move = newMove
-
-            print "result: {} {}".format(result, newMove)
-            if result == searchPoint:
-                print "Search point exactly matches result"
-                break
-            elif result > searchPoint:
-                print "Guess was too low"
+            #print "------------------"
+            #print lower, "(search at {})".format(searchPoint), upper
+            result, move = self._alphaBetaSearch(board, depth, searchPoint, searchPoint)
+            #print "result: {} {}".format(result, newMove)
+            if result > searchPoint:
+                #print "Guess was too low"
                 lower = result
                 searchPoint = lower + step
             else:
-                print "Guess was too high"
+                #print "Guess was too high"
                 upper = result
                 searchPoint = upper - step
+            step = (upper - lower) / float(2)
+            #print "Step", step
         # Special case: 0-length interval (board's upper and lower bounds are equal)
         if move is None:
-            _, move = self._alphaBetaSearch(board, depth, result, result)
-        print "Final interval", lower, upper
-        print "return", result, move
+            result, move = self._alphaBetaSearch(board, depth, result, result)
+        #print "Final interval", lower, upper
+        #print "return", result, move
         return result, move
 
     def _deepeningMTDFSearch(self, board, maxDepth=6):
@@ -271,7 +254,7 @@ def simulate(whiteAgent, blackAgent, verbose=True):
     while not board.is_game_over():
         if verbose:
             print board
-            print board.fen()
+            # print board.fen()
         if board.turn == chess.WHITE:
             move = whiteAgent.getMove(board)
         else:
