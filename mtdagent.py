@@ -2,7 +2,6 @@
 
 import collections
 import chess, chess.uci
-from tdlearning import TDLambda
 from features import Feature
 import numpy as np
 

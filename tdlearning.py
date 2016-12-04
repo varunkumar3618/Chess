@@ -1,8 +1,9 @@
 from collections import defaultdict
-
+import numpy as np
 import chess
 
-from mtdagent import MTDAgent, UCIChessAgent, evaluate
+from mtdagent import MTDAgent, UCIChessAgent, renderBoard
+from features import ALL_FEATURES
 
 MATE_VALUE = 60000 + 8*2700
 
@@ -34,7 +35,7 @@ class TDLambda(TDAlgorithm):
 
     def incorporateFeedback(self, state, reward, newState):
         futureValue = self.discount * self.valueFunction(newState)
-        delta = reward + futureValue - self.valueFunction(newState)
+        delta = reward + futureValue - self.valueFunction(state)
 
         self.Z[self.key(state)] += 1
         for s in self.Z:
@@ -80,6 +81,8 @@ def tdlambda(score, blackAgent, depth, numGames, decay, discount, alpha, checkma
                 move = blackAgent.getMove(board)
 
             nextBoard.push(move)
+            renderBoard(board)
+            print "\n"
             reward = 0.
             if board.is_game_over():
                 if nextBoard.result() == "1-0":
@@ -91,10 +94,21 @@ def tdlambda(score, blackAgent, depth, numGames, decay, discount, alpha, checkma
 
     return alg.updates()
 
-if __name__ == '__main__':
-    whiteAgent = MTDAgent(depth=4, score=evaluate)
+def main():
+    weights = np.load("./train/2016-12-03 22:01:32.634428 pretrained weights.npy")
+    def extractFeatureVector(board):
+        vectors = []
+        for feature in ALL_FEATURES:
+            vector = feature.value(board).flatten()
+            vectors.append(vector)
+        featureVector = np.concatenate(vectors)
+        return featureVector
+
+    def score(board):
+        return np.dot(weights, extractFeatureVector(board))
+    # whiteAgent = MTDAgent(depth=4, score=evaluate)
     updates = tdlambda(
-        score=evaluate,
+        score=score,
         blackAgent=UCIChessAgent('./engines/stockfish', 10),
         depth=1,
         numGames=1,
@@ -103,3 +117,7 @@ if __name__ == '__main__':
         alpha=0.01,
         checkmateReward=MATE_VALUE
     )
+    print updates
+
+if __name__ == '__main__':
+    main()
