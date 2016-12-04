@@ -6,8 +6,7 @@ import chess
 
 import datetime
 
-from features import Counts, PawnOccupation
-ALL_FEATURES = [Counts(), PawnOccupation()]
+from features import ALL_FEATURES
 
 def datasetBatches(filename, batchSize=10):
     with open(filename) as f:
@@ -86,8 +85,8 @@ def test(filename, weights):
 def main():
     weights = train("./train/sample.csv")
     print weights
-    # now = datetime.datetime.now()
-    # np.save("./train/{} pretrained weights".format(now), weights)
+    now = datetime.datetime.now()
+    np.save("./train/{} pretrained weights".format(now), weights)
 
     # weights = np.load("./train/2016-12-03 17:45:55.697714 pretrained weights.npy")\
     # Compute training set error
