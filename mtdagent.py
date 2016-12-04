@@ -123,27 +123,18 @@ class LRUCache(object):
         self.elems.append(elem)
 
 
-class TDMTDAgent(object):
+class MTDAgent(object):
     """
-    A TD-Lambda agent with MTD(f) search.
+    An gent with MTD(f) search.
     """
-    def __init__(self, depth, features, traceDecay=0.7, learningRate=0.001):
+    def __init__(self, depth, score):
         self.depth = depth
         self.alphaBetaCache = collections.defaultdict(dict)
         self.killerCache = collections.defaultdict(lambda: LRUCache(2))
-        self.features = features
-        self.weights = {}
-        for feature in self.features:
-            self.weights[feature] = np.random.normal(size=feature.shape).astype('float32')
-
-        def valueClosure(board):
-            return self._score(board)
-        def backupClosure(board, scale):
-            self._backup(board, scale)
-        self.tdLambda = TDLambda(traceDecay, valueClosure, backupClosure, discount=1, alpha=learningRate)
+        self.score = score
 
     def beginGame(self):
-        self.tdLambda.beginEpisode()
+        pass
 
     def _getMoves(self, board, depth):
         legalMoves = set(board.generate_legal_moves())
@@ -157,10 +148,6 @@ class TDMTDAgent(object):
 
     def _addKillerMove(self, board, depth, move):
         self.killerCache[depth].insert(move)
-
-    def _score(self, board):
-        return sum(np.sum(weight * feature.value(board))
-                   for feature, weight in self.weights.items())
 
     def _alphaBetaSearch(self, board, depth, alpha=-float('inf'), beta=float('inf')):
         key = BoardKey(board.fen(), board.zobrist_hash())
@@ -176,7 +163,7 @@ class TDMTDAgent(object):
         # lower, upper = -float('inf'), float('inf')
 
         if depth == 0:
-            bestVal, bestMove = self._score(board), None
+            bestVal, bestMove = self.score(board), None
         elif board.turn == chess.WHITE:
             a, aMove = alpha, None
             bestVal, bestMove = -float('inf'), None
@@ -256,18 +243,10 @@ class TDMTDAgent(object):
                 guess, move = nextGuess, nextMove
             else:
                 break
-        print guess, move
         return guess, move
 
     def getMove(self, board):
         return self._deepeningMTDFSearch(board, self.depth)[1]
-
-    def incorporateFeedback(self, state, action, reward, newState):
-        self.tdLambda.incorporateFeedback(state, reward, newState)
-
-    def _backup(self, board, scale):
-        for feature in self.features:
-            self.weights[feature] += feature.value(board) * scale
 
 class UCIChessAgent(object):
     def __init__(self, engineFile, engineMoveTime):
@@ -331,4 +310,14 @@ def launchPDB(sig, frame):
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, launchPDB)
     print(os.getpid())
-    simulate(TDMTDAgent(depth=4, features=[TableValue()]), UCIChessAgent('./engines/stockfish', 10))
+    whiteAgent = MTDAgent(depth=4, score=evaluate)
+    print tdlambda(
+        score=evaluate,
+        blackAgent=UCIChessAgent('./engines/stockfish', 10),
+        depth=1,
+        numGames=1,
+        decay=1.,
+        discount=1.,
+        alpha=0.01,
+        checkmateReward=MATE_VALUE
+    )
