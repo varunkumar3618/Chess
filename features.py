@@ -169,6 +169,12 @@ class PieceLists(Feature):
 
         return value
 
+class Constant(Feature):
+    @property
+    def shape(self):
+        return (1,)
+    def value(self, board):
+        return np.array([1])
 
 # return an array of every feature extractor
-ALL_FEATURES = [SideToMove(), CastlingRights(), MaterialConfiguration(), PieceLists()]
+ALL_FEATURES = [SideToMove(), CastlingRights(), MaterialConfiguration(), PieceLists(), Constant()]
