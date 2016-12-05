@@ -5,6 +5,12 @@ import numpy as np
 import tensorflow as tf
 import chess
 
+def make_board_tensor(epd_sym):
+    def conv(epd):
+        b = chess.Board()
+        b.set_epd(epd)
+        
+
 class LogisticRegression(object):
     def __init__(self, datafile, num_features, batch_size, min_after_dequeue, use_bias, learning_rate, use_board_vector, float_type, discount):
         self._datafile = datafile
@@ -76,9 +82,8 @@ class LogisticRegression(object):
         if self._use_bias:
             scores_b += self._use_bias
         pred_b = tf.nn.softmax(scores_b)
-        self.debug = tf.reduce_mean(self._W)
 
-        logloss = -(label_b * tf.log(pred_b) + (1 - label_b) * tf.log(1 - pred_b))
+        logloss = tf.nn.sigmoid_cross_entropy_with_logits(pred_b, label_b)
         costs = tf.pow(tf.cast(self._discount, self._float_type), steps_b) * logloss
         self._cost = tf.reduce_mean(costs)
         self._opt = tf.train.GradientDescentOptimizer(self._learning_rate).minimize(self._cost)
