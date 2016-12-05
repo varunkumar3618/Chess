@@ -5,9 +5,6 @@ import numpy as np
 import tensorflow as tf
 import chess
 
-def make_board_tensor(epd):
-
-
 class LogisticRegression(object):
     def __init__(self, datafile, num_features, batch_size, min_after_dequeue, use_bias, learning_rate, use_board_vector, float_type, discount):
         self._datafile = datafile
@@ -34,7 +31,7 @@ class LogisticRegression(object):
         self._saver = tf.train.Saver(save_d)
 
     def _get_features(self):
-            file_q = tf.train.string_input_producer([self._datafile])
+        file_q = tf.train.string_input_producer([self._datafile])
         if self._use_board_vector:
             reader = tf.TextLineReader()
             _, row = reader.read(file_q)
