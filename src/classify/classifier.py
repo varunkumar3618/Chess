@@ -9,7 +9,7 @@ def make_board_tensor(epd_sym):
     def conv(epd):
         b = chess.Board()
         b.set_epd(epd)
-        
+
 
 class LogisticRegression(object):
     def __init__(self, datafile, num_features, batch_size, min_after_dequeue, use_bias, learning_rate, use_board_vector, float_type, discount):
@@ -81,9 +81,8 @@ class LogisticRegression(object):
         scores_b = self._get_scores(board_b)
         if self._use_bias:
             scores_b += self._use_bias
-        pred_b = tf.nn.softmax(scores_b)
 
-        logloss = tf.nn.sigmoid_cross_entropy_with_logits(pred_b, label_b)
+        logloss = tf.nn.sigmoid_cross_entropy_with_logits(scores_b, label_b)
         costs = tf.pow(tf.cast(self._discount, self._float_type), steps_b) * logloss
         self._cost = tf.reduce_mean(costs)
         self._opt = tf.train.GradientDescentOptimizer(self._learning_rate).minimize(self._cost)
