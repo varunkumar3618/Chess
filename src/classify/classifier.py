@@ -58,7 +58,8 @@ class LogisticRegression(object):
                 }
             )
             board_, steps, label_ = features["board"], features["steps"], features["label"]
-            board = tf.decode_raw(board_, self._float_type)
+            board = tf.decode_raw(board_, tf.float64)
+            board = tf.cast(board, self._float_type)
             board.set_shape([self._num_features])
             steps = tf.cast(steps, self._float_type)
             label = tf.cast((label_ + 1) / 2, self._float_type)
