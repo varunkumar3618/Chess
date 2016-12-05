@@ -1,7 +1,5 @@
 import chess
 
-from gamestate import ChessGameState
-
 class TestSuite(object):
     def __init__(self, agent):
         self.agent = agent
@@ -38,8 +36,8 @@ class EPDTestSuite(TestSuite):
         position = chess.Board()
         epdInfo = position.set_epd(epdLine)
         bestMove = epdInfo["bm"][0]
-        self.agent.beginEpisode(None, None) # FIXME
-        move = self.agent.getAction(ChessGameState(position))
+        self.agent.beginGame() # FIXME
+        move = self.agent.getMove(position)
         return (move, bestMove)
 
     def run(self):

@@ -3,16 +3,13 @@ import sys
 import argparse
 
 from testsuite import EPDTestSuite
-from agent import UCIChessAgent, TDLambdaAgent
-
-from features import Counts, PawnOccupation
-from search import MinimaxSearchWithAlphaBeta
+from mtdagent import TDMTDAgent, UCIChessAgent
 
 ROOT_PATH = path.dirname(path.realpath(__file__))
 
 AGENT_CONSTRUCTORS = {
     "stockfish": lambda: UCIChessAgent(path.join(ROOT_PATH, "engines", "stockfish"), engineMoveTime=1),
-    "tdlambda": lambda: TDLambdaAgent(MinimaxSearchWithAlphaBeta(), [Counts(), PawnOccupation()], 0.7, depth=2)
+    "myagent": lambda: TDMTDAgent(depth=4)
 }
 
 def main(args):

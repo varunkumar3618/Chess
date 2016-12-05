@@ -127,23 +127,13 @@ class TDMTDAgent(object):
     """
     A TD-Lambda agent with MTD(f) search.
     """
-    def __init__(self, depth, features, traceDecay=0.7, learningRate=0.001):
+    def __init__(self, depth):
         self.depth = depth
         self.alphaBetaCache = collections.defaultdict(dict)
         self.killerCache = collections.defaultdict(lambda: LRUCache(2))
-        self.features = features
-        self.weights = {}
-        for feature in self.features:
-            self.weights[feature] = np.random.normal(size=feature.shape).astype('float32')
-
-        def valueClosure(board):
-            return self._score(board)
-        def backupClosure(board, scale):
-            self._backup(board, scale)
-        self.tdLambda = TDLambda(traceDecay, valueClosure, backupClosure, discount=1, alpha=learningRate)
 
     def beginGame(self):
-        self.tdLambda.beginEpisode()
+        pass
 
     def _getMoves(self, board, depth):
         legalMoves = set(board.generate_legal_moves())
@@ -159,8 +149,7 @@ class TDMTDAgent(object):
         self.killerCache[depth].insert(move)
 
     def _score(self, board):
-        return sum(np.sum(weight * feature.value(board))
-                   for feature, weight in self.weights.items())
+        return evaluate(board)
 
     def _alphaBetaSearch(self, board, depth, alpha=-float('inf'), beta=float('inf')):
         key = BoardKey(board.fen(), board.zobrist_hash())
@@ -261,13 +250,6 @@ class TDMTDAgent(object):
 
     def getMove(self, board):
         return self._deepeningMTDFSearch(board, self.depth)[1]
-
-    def incorporateFeedback(self, state, action, reward, newState):
-        self.tdLambda.incorporateFeedback(state, reward, newState)
-
-    def _backup(self, board, scale):
-        for feature in self.features:
-            self.weights[feature] += feature.value(board) * scale
 
 class UCIChessAgent(object):
     def __init__(self, engineFile, engineMoveTime):
