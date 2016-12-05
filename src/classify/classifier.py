@@ -24,7 +24,7 @@ class LogisticRegression(object):
         self._use_board_vector = use_board_vector
 
         self._build_params()
-        self._build_train_model()
+        self._build_model()
 
     def _build_params(self):
         self._W = tf.Variable(dtype=self._float_type, initial_value=np.zeros([self._num_features]))
@@ -70,7 +70,7 @@ class LogisticRegression(object):
         scores_b = tf.reduce_sum((board_b * self._W), 1)
         return scores_b
 
-    def _build_train_model(self):
+    def _build_model(self):
         board, steps, label = self._get_features()
         board_b, steps_b, label_b = tf.train.shuffle_batch(
             [board, steps, label],
@@ -88,6 +88,9 @@ class LogisticRegression(object):
         self._cost = tf.reduce_mean(costs)
         self._opt = tf.train.GradientDescentOptimizer(tf.constant(self._learning_rate, self._float_type)).minimize(self._cost)
 
+        preds_b = tf.cast(tf.sigmoid(scores_b) >= 0.5, self._float_type)
+        self._acc = 100 * tf.reduce_sum((preds_b * label_b) + ((1 - preds_b) * (1 - label_b))) / float(self._batch_size)
+
     def init(self, sess, prev_checkpoint=None):
         variables = tf.global_variables()
         sess.run(tf.variables_initializer(variables))
@@ -100,8 +103,8 @@ class LogisticRegression(object):
 
         for step in range(num_batches):
             if step % 100 == 0:
-                _, cost = sess.run([self._opt, self._cost])
-                print "Step: %s, cost: %s" % (step + 1, cost)
+                _, cost, acc = sess.run([self._opt, self._cost, self._acc])
+                print "Step: %s, cost: %s, accuracy: %s" % (step + 1, cost, acc)
             else:
                 sess.run([self._opt])
 
