@@ -59,7 +59,7 @@ def generate_data(filename, keep_draws=False):
         game = chess.pgn.read_game(f)
         game.accept(visitor)
 
-        if not keep_draws and visitor.result() == "0-0":
+        if not keep_draws and visitor.result() == "1/2-1/2":
             continue
         lines += visitor.getLines()
 
