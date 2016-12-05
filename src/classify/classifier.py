@@ -58,7 +58,8 @@ class LogisticRegression(object):
                 }
             )
             board_, steps, label_ = features["board"], features["steps"], features["label"]
-            board = tf.decode_raw(board_, self._float_type)
+            board = tf.decode_raw(board_, tf.float64)
+            board = tf.cast(board, self._float_type)
             board.set_shape([self._num_features])
             steps = tf.cast(steps, self._float_type)
             label = tf.cast((label_ + 1) / 2, self._float_type)
@@ -85,7 +86,7 @@ class LogisticRegression(object):
         logloss = tf.nn.sigmoid_cross_entropy_with_logits(scores_b, label_b)
         costs = tf.pow(tf.cast(self._discount, self._float_type), steps_b) * logloss
         self._cost = tf.reduce_mean(costs)
-        self._opt = tf.train.GradientDescentOptimizer(self._learning_rate).minimize(self._cost)
+        self._opt = tf.train.GradientDescentOptimizer(tf.constant(self._learning_rate, self._float_type)).minimize(self._cost)
 
     def init(self, sess, prev_checkpoint=None):
         variables = tf.global_variables()
