@@ -1,6 +1,8 @@
 import chess
 import numpy as np
 
+from tdpredictor import TDNet
+
 class TDAlgorithm(object):
     def beginEpisode(self, initialState):
         pass
@@ -45,3 +47,26 @@ class TDLambda(TDAlgorithm):
 
     def getWeights(self):
         return self.weights
+
+class TDNetLambda(TDAlgorithm):
+    def __init__(self, decay, featureExtractor, model, learningRate=0.01):
+        self.net = TDNet(featureExtractor, model, decay, learningRate)
+        self.previousState = self.previousValue = None
+
+    def beginEpisode(self, initialState):
+        self.net.begin_game()
+        self.previousState = initialState
+        self.previousValue = self.net.evaluate(initialState)
+
+    def incorporateFeedback(self, reward, newState):
+        if reward == 0:
+            newValue = self.net.evaluate(newState)
+        else:
+            newValue = reward
+        self.net.update_trace(self.previousState)
+        self.net.update_params(newValue - self.previousValue)
+        self.previousState = newState
+        self.previousValue = newValue
+
+    def getWeights(self):
+        return np.zeros((1, 1))

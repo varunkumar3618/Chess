@@ -2,10 +2,11 @@ import chess
 import numpy as np
 import datetime
 
-from tdlearning import TDLambda
+from tdlearning import TDLambda, TDNetLambda
 from agent import UCIChessAgent
 from util import renderBoard
 from features import ALL_FEATURES
+from nn import *
 
 def extractFeatureVector(board):
     vectors = []
@@ -61,7 +62,11 @@ def simulate(tdAlg, numGames=10):
 def main():
     initialWeights = None
     # initialWeights = np.load("./training-weights/...")
-    tdAlg = TDLambda(decay=0.75, featureExtractor=extractFeatureVector, initialWeights=initialWeights)
+    model = Sequential(layers=[
+        Linear(0.1 * np.ones((146, 1), dtype="float32")),
+        Sigmoid()
+    ])
+    tdAlg = TDNetLambda(decay=0.75, featureExtractor=extractFeatureVector, model=model)
     simulate(tdAlg, numGames=10)
     weights = tdAlg.getWeights()
     now = datetime.datetime.now()

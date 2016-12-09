@@ -17,6 +17,12 @@ DEFAULT_PIECE_SCORES = {
     chess.KING: 100
 }
 
+def full_board_repr(board):
+    board_t = np.zeros((8, 8, 12))
+
+def full_board_repr_flat(board):
+    return full_board_repr(board).flatten()
+
 def piece_counts(board, player):
     return {
         piece: len(board.pieces(piece, player))
