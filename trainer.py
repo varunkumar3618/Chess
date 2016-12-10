@@ -1,11 +1,11 @@
-import chess
 import numpy as np
 import datetime
+import os
 
 from tdlearning import TDLambda
 from agent import UCIChessAgent
-from util import renderBoard
 from features import ALL_FEATURES
+from simulator import Simulator
 
 def extractFeatureVector(board):
     vectors = []
@@ -15,57 +15,25 @@ def extractFeatureVector(board):
     featureVector = np.concatenate(vectors)
     return featureVector
 
-def simulate(tdAlg, numGames=10):
-    playerAgent = UCIChessAgent('./engines/stockfish', 50)
-    opponentAgent = UCIChessAgent('./engines/stockfish', 10)
-    for game in xrange(numGames):
-        if game % 2 == 0:
-            print "Stronger agent playing as white"
-            whiteAgent = playerAgent
-            blackAgent = opponentAgent
-        else:
-            print "Stronger agent playing as black"
-            whiteAgent = opponentAgent
-            blackAgent = playerAgent
-        print "Game {} of {}".format(game + 1, numGames)
-        board = chess.Board()
-        nextBoard = chess.Board()
-        whiteAgent.beginGame()
-        blackAgent.beginGame()
-        tdAlg.beginEpisode(board)
-
-        renderBoard(board); print "\n"
-
-        while not board.is_game_over():
-            if board.turn == chess.WHITE:
-                move = whiteAgent.getMove(board)
-            else:
-                move = blackAgent.getMove(board)
-
-            nextBoard.push(move)
-            renderBoard(nextBoard); print "\n"
-            reward = 0.
-            if nextBoard.is_game_over():
-                print "Game over", nextBoard.result()
-                print "-----------------------------------------------"
-                if nextBoard.result() == "1-0":
-                    reward = 1
-                elif nextBoard.result() == "0-1":
-                    reward = 0
-                else:
-                    reward = 0.5
-            tdAlg.incorporateFeedback(reward, nextBoard)
-            board.push(move)
-    return tdAlg.weights
-
 def main():
     initialWeights = None
-    # initialWeights = np.load("./training-weights/...")
-    tdAlg = TDLambda(decay=0.75, featureExtractor=extractFeatureVector, initialWeights=initialWeights)
-    simulate(tdAlg, numGames=10)
+    savedWeights = os.listdir("./training-weights/")
+    if len(savedWeights) > 0:
+        weightsName = sorted(savedWeights)[-1]
+        print "Loading ", weightsName
+        initialWeights = np.load("./training-weights/{}".format(weightsName))
+
+    tdAlg = TDLambda(featureExtractor=extractFeatureVector, initialWeights=initialWeights)
+    numGames=20
+    strongAgent = UCIChessAgent("Strong Stockfish", './engines/stockfish', 50)
+    weakAgent = UCIChessAgent("Weak Stockfish", './engines/stockfish', 10)
+    sim = Simulator(verbose=True, tdAlgorithm=tdAlg)
+    winners = sim.simulate(playerAgent=strongAgent, opponentAgent=weakAgent, numGames=numGames)
+    print "Winners: ", winners
     weights = tdAlg.getWeights()
+    print weights
     now = datetime.datetime.now()
-    np.save("./training-weights/{}".format(now), weights)
+    np.save("./training-weights/{}-{} games".format(now, numGames), weights)
 
 if __name__ == "__main__":
     main()

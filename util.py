@@ -6,6 +6,7 @@ def renderBoard(board):
     fen = board.fen()
     position = fen.split(" ")[0]
     rows = position.split("/")
+    final = []
     for row in rows:
         rowString = ""
         for pieceName in row:
@@ -13,4 +14,5 @@ def renderBoard(board):
                 rowString += "".join([". "] * int(pieceName))
             else:
                 rowString += "{} ".format(pieces[pieceName])
-        print rowString
+        final.append(rowString)
+    return "\n".join(final)

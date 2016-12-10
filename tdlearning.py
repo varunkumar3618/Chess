@@ -8,7 +8,7 @@ class TDAlgorithm(object):
         pass
 
 class TDLambda(TDAlgorithm):
-    def __init__(self, decay, featureExtractor, discount=1., learningRate=0.01, initialWeights=None):
+    def __init__(self, featureExtractor, decay=0.75, discount=1., learningRate=0.001, initialWeights=None):
         self.decay = decay # lambda
         self.featureExtractor = featureExtractor # Phi
         self.discount = discount # gamma
@@ -39,7 +39,10 @@ class TDLambda(TDAlgorithm):
         valueChange = currentValue - self.previousValue # V - Vold
         self.weights += self.learningRate * (delta + valueChange) * self.e \
                         - self.learningRate * valueChange * self.previousFeatures
-
+        print "Reward", reward
+        print "newValue", newValue
+        print "currentValue", currentValue
+        print "valueChange", valueChange
         self.previousValue = newValue
         self.previousFeatures = newFeatures
 
