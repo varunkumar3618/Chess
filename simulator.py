@@ -59,10 +59,10 @@ class Simulator(object):
                         reward = 1
                         winners.append(whiteAgent.getName())
                     elif nextBoard.result() == "0-1":
-                        reward = 0
+                        reward = -1
                         winners.append(blackAgent.getName())
                     else:
-                        reward = 0.5
+                        reward = 0
                         winners.append(None)
 
                 self.incorporateFeedback(reward, nextBoard)
