@@ -38,8 +38,8 @@ def main():
         print previousWeights
     sim = Simulator(verbose=True)
     numGames = 2
-    strongAgent = MTDAgent(name="Strong MTD", depth=3, score=scoringFunction(latestWeights))
-    weakAgent = MTDAgent(name="Weak MTD", depth=3, score=scoringFunction(previousWeights))
+    strongAgent = MTDAgent(name="Strong MTD", depth=2, score=scoringFunction(latestWeights))
+    weakAgent = MTDAgent(name="Weak MTD", depth=2, score=scoringFunction(previousWeights))
     winners = sim.simulate(playerAgent=strongAgent, opponentAgent=weakAgent, numGames=numGames)
     print "Winners:", winners
 
