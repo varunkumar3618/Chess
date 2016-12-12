@@ -30,16 +30,19 @@ class TDLambda(TDAlgorithm):
     def incorporateFeedback(self, reward, newState):
         currentValue = np.dot(self.weights, self.previousFeatures) # V
         newFeatures = self.featureExtractor(newState) # Phi'
-        newValue = np.dot(self.weights, newFeatures) # V'
+        if reward == 0:
+            newValue = np.dot(self.weights, newFeatures) # V'
+        else:
+            newValue = reward
+
         self.e = self.discount * self.decay * self.e + (
             1 - self.learningRate * self.discount * self.decay * np.dot(self.e, self.previousFeatures)
         ) * self.previousFeatures
 
-        delta = reward + self.discount * newValue - currentValue
+        delta = self.discount * newValue - currentValue
         valueChange = currentValue - self.previousValue # V - Vold
         self.weights += self.learningRate * (delta + valueChange) * self.e \
                         - self.learningRate * valueChange * self.previousFeatures
-        print "Reward", reward
         print "newValue", newValue
         print "currentValue", currentValue
         print "valueChange", valueChange
