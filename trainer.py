@@ -4,16 +4,8 @@ import os
 
 from tdlearning import TDLambda
 from agent import UCIChessAgent
-from features import ALL_FEATURES
+from features import ALL_FEATURES, extractFeatureVector
 from simulator import Simulator
-
-def extractFeatureVector(board):
-    vectors = []
-    for feature in ALL_FEATURES:
-        vector = feature.value(board).flatten()
-        vectors.append(vector)
-    featureVector = np.concatenate(vectors)
-    return featureVector
 
 def main():
     numBatches = 100
@@ -26,7 +18,7 @@ def main():
             print "Loading ", weightsName
             initialWeights = np.load("./training-weights/{}".format(weightsName))
 
-        tdAlg = TDLambda(featureExtractor=extractFeatureVector, initialWeights=initialWeights)
+        tdAlg = TDLambda(featureExtractor=lambda b: extractFeatureVector(ALL_FEATURES, b), initialWeights=initialWeights)
         numGames = 20
         strongAgent = UCIChessAgent("Strong Stockfish", './engines/stockfish', 100)
         weakAgent = UCIChessAgent("Weak Stockfish", './engines/stockfish', 10)

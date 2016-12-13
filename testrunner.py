@@ -9,25 +9,17 @@ from agent import UCIChessAgent, MTDAgent, RandomAgent
 
 import numpy as np
 
-from features import ALL_FEATURES
+from features import ALL_FEATURES, extractFeatureVector
 
 ROOT_PATH = path.dirname(path.realpath(__file__))
 WEIGHTS_DIR = path.join(ROOT_PATH, "training-weights")
-
-def extractFeatureVector(board):
-    vectors = []
-    for feature in ALL_FEATURES:
-        vector = feature.value(board).flatten()
-        vectors.append(vector)
-    featureVector = np.concatenate(vectors)
-    return featureVector
 
 def MTDConstructor():
     weightsName = sorted(os.listdir(WEIGHTS_DIR))[-1]
     print "Using weights", weightsName
     weights = np.load(path.join(WEIGHTS_DIR, weightsName))
     def score(board):
-        value = np.dot(weights, extractFeatureVector(board))
+        value = np.dot(weights, extractFeatureVector(ALL_FEATURES, board))
         return value
     return MTDAgent(name="MTD", depth=3, score=score)
 

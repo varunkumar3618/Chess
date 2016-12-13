@@ -176,5 +176,14 @@ class Constant(Feature):
     def value(self, board):
         return np.array([1])
 
+
+def extractFeatureVector(features, board):
+    vectors = []
+    for feature in features:
+        vector = feature.value(board).flatten()
+        vectors.append(vector)
+    featureVector = np.concatenate(vectors)
+    return featureVector
+
 # return an array of every feature extractor
 ALL_FEATURES = [SideToMove(), CastlingRights(), MaterialConfiguration(), PieceLists(), Constant()]
