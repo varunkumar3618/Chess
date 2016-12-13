@@ -1,5 +1,6 @@
 import chess, chess.uci
 import collections
+import random
 
 class UCIChessAgent(object):
     def __init__(self, name, engineFile, engineMoveTime):
@@ -14,6 +15,16 @@ class UCIChessAgent(object):
     def getMove(self, board):
         self.engine.position(board)
         return self.engine.go(movetime=self.engineMoveTime)[0]
+
+class RandomAgent(object):
+    def __init__(self, name):
+        self.name = name
+    def getName(self):
+        return self.name
+    def beginGame(self):
+        pass
+    def getMove(self, board):
+        return random.choice(list(board.generate_legal_moves()))
 
 class BoardKey(object):
     def __init__(self, fen, zobrist):
