@@ -1,21 +1,27 @@
 import time
+import os
 
 import numpy as np
 import tensorflow as tf
 import chess
+import chess.pgn
 
 from game import play
 from ops import affine_layer
+from agents import MTDAgent, HumanAgent, RandomAgent
+
+FEATS_LEN = 2 * (8 * 8 * 6 + 3)
 
 class Model(object):
     def __init__(self, sess, model_path, summary_path, checkpoint_path, restore=False, scope="model",
-                 lamda=0.7, alpha=0.01, hidden_size=1024):
+                 lamda=0.7, alpha=0.01, hidden_size=1024, depth=4):
         self._model_path = model_path
         self._summary_path = summary_path
         self._checkpoint_path = checkpoint_path
         self._sess = sess
         self._scope = scope
         self._hidden_size = hidden_size
+        self._depth = depth
 
         with tf.variable_scope(scope):
             self._global_step = tf.Variable(0, trainable=False, name="global_step")
@@ -30,15 +36,15 @@ class Model(object):
             tf.scalar_summary('lambda', lamda)
             tf.scalar_summary('alpha', alpha)
 
-            self._board_t = tf.placeholder(tf.float32, [1, 2*8*8*6], name="board")
+            self._board_t = tf.placeholder(tf.float32, [1, FEATS_LEN], name="board")
             self._v_next = tf.placeholder(tf.float32, [1, 1], name="n_next")
 
             h1 = affine_layer(
                 input_t=self._board_t,
-                input_dim=2*8*8*6,
+                input_dim=FEATS_LEN,
                 output_dim=self._hidden_size,
-                w_init=0,
-                b_init=0,
+                w_init=tf.random_normal_initializer(dtype=tf.float32, stddev=0.02),
+                b_init=tf.constant_initializer(0., dtype=tf.float32),
                 activation=tf.sigmoid,
                 name="affine_1"
             )
@@ -46,8 +52,8 @@ class Model(object):
                 input_t=h1,
                 input_dim=self._hidden_size,
                 output_dim=1,
-                w_init=0,
-                b_init=0,
+                w_init=tf.random_normal_initializer(dtype=tf.float32, stddev=0.02),
+                b_init=tf.constant_initializer(0., dtype=tf.float32),
                 activation=tf.sigmoid,
                 name="affine_2"
             )
@@ -114,7 +120,7 @@ class Model(object):
 
         self._summaries_op = tf.merge_all_summaries()
         self._saver = tf.train.Saver(max_to_keep=1)
-        self._sess.run(tf.initialize_all_variables())
+        self._sess.run(tf.global_variables_initializer())
 
         if restore:
             self._restore()
@@ -123,20 +129,22 @@ class Model(object):
         pass
 
     def _get_output(self, board_t):
-        return self.sess.run(self._v, feed_dict={ self._board_t: board_t })
+        return self._sess.run(self._v, feed_dict={ self._board_t: board_t })
 
     def play(self, humanAsWhite=True):
         if humanAsWhite:
-            play(HumanAgent(), TDAgent(self))
+            play(HumanAgent(), MTDAgent(self._depth, self))
         else:
-            play(TDAgent(self), HumanAgent())
+            play(MTDAgent(self._depth, self), HumanAgent())
 
     def test(self, episodes=100):
-        td_agent = TDAgent(self)
+        td_agent = MTDAgent(self._depth, self)
         random_agent = RandomAgent()
 
         wins, losses, draws = 0, 0, 0
         for episode in range(episodes):
+            td_agent.begin_game()
+            random_agent.begin_game()
             if episode % 2 == 0:
                 result = play(td_agent, random_agent)
                 if result == "1-0":
@@ -156,6 +164,76 @@ class Model(object):
 
             print("[Episode %s] Wins: %s, losses: %s, draws: %s." % (episode, wins, losses, draws))
 
+    def _get_pgn_files(self):
+        for file in os.listdir("data/"):
+            if ".pgn" in file:
+                yield os.path.join("data", file)
+
+    def _get_boards(self, pgn_file):
+        with open(pgn_file, "r") as f:
+            offsets = []
+            for offset, _ in chess.pgn.scan_headers(f):
+                offsets.append(offset)
+
+            for offset in offsets:
+                f.seek(offset)
+                game_node = chess.pgn.read_game(f)
+                game_result = game_node.headers["Result"]
+                boards = []
+                while len(game_node.variations) > 0:
+                    boards.append(game_node.board())
+                    game_node = game_node.variations[0]
+                boards.append(game_node.board())
+
+                yield game_result, boards
+
+    def pretrain(self):
+        tf.train.write_graph(self._sess.graph_def, self._model_path, "td_chess.pb", as_text=False)
+        summary_writer = tf.train.SummaryWriter("{0}{1}".format(self._summary_path, int(time.time()), self._sess.graph_def))
+
+        validation_interval = 1000
+        episodes = 5000
+
+        pgn_files = self._get_pgn_files()
+
+        episode = 0
+        for pgn_file in pgn_files:
+            for game_result, boards in self._get_boards(pgn_file):
+                episode += 1
+                board = boards[0]
+                board_t = self._extract_features(board)
+                game_step = 0
+
+                for i in range(1, len(boards)):
+                    board = boards[i]
+                    board_next_t = self._extract_features(board)
+                    v_next_t = self._get_output(board_next_t)
+                    self._sess.run(self._train_op, feed_dict={ self._board_t: board_t, self._v_next: v_next_t})
+                    board_t = board_next_t
+                    game_step += 1
+
+                if game_result == "1-0":
+                    result = 1
+                    winner_str = "Winner: White"
+                elif game_result == "0-1":
+                    result = 0
+                    winner_str = "Winner: Black"
+                else:
+                    result = 0.5
+                    winner_str = "Draw"
+                _, global_step, summaries, _ = self._sess.run([
+                    self._train_op,
+                    self._global_step,
+                    self._summaries_op,
+                    self._reset_op
+                ], feed_dict={ self._board_t: board_t, self._v_next: np.array([[result]], dtype="float32") })
+                summary_writer.add_summary(summaries, global_step=global_step)
+
+                print("Game %d/%d (%s) in %d turns" % (episode, episodes, winner_str, game_step))
+                self._saver.save(self._sess, self._checkpoint_path + "checkpoint", global_step=global_step)
+
+        summary_writer.close()
+        self.test(episodes=1000)
 
     def train(self):
         tf.train.write_graph(self._sess.graph_def, self._model_path, "td_chess.pb", as_text=False)
@@ -164,8 +242,9 @@ class Model(object):
         validation_interval = 1000
         episodes = 5000
 
-        agent = TDAgent(self)
+        agent = MTDAgent(self, self._depth, self)
         for episode in range(episodes):
+            agent.begin_game()
             if episode != 0 and episode % validation_interval == 0:
                 self.test(episodes=100)
 
@@ -198,13 +277,34 @@ class Model(object):
                     self._global_step,
                     self._summaries_op,
                     self._reset_op
-                ], feed_dict={ self._board_t: board_t, self._v_next: np.array([result], dtype="float32") })
+                ], feed_dict={ self._board_t: board_t, self._v_next: np.array([[result]], dtype="float32") })
                 summary_writer.add_summary(summaries, global_step=global_step)
 
-
-                winner_str = "White" if result == 1 else ()
                 print("Game %d/%d (%s) in %d turns" % (episode, episodes, winner_str, game_step))
                 self._saver.save(self._sess, self._checkpoint_path + "checkpoint", global_step=global_step)
 
         summary_writer.close()
         self.test(episodes=1000)
+
+    def _extract_features(self, board):
+        board_t = np.zeros((2, 8, 8, 6), dtype="float32")
+        for rank in range(8):
+            for file in range(8):
+                piece = board.piece_at(8 * rank + file)
+                if piece is not None:
+                    piece_color, piece_type = piece.color, piece.piece_type
+                    board_t[piece_color][rank][file][piece_type-1] = 1
+
+        props_t = np.zeros((2, 3), dtype="float32")
+        for color in [chess.WHITE, chess.BLACK]:
+            if board.turn == color:
+                props_t[color][0] = 1
+            if board.has_kingside_castling_rights(color):
+                props_t[color][1] = 1
+            if board.has_queenside_castling_rights(color):
+                props_t[color][2] = 1
+
+        return np.expand_dims(np.concatenate((board_t.reshape((2, -1)), props_t), axis=1).flatten(), axis=0)
+
+    def evaluate(self, board):
+        return self._get_output(self._extract_features(board))
