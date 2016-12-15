@@ -14,7 +14,7 @@ FEATS_LEN = 2 * (8 * 8 * 6 + 3)
 
 class Model(object):
     def __init__(self, sess, model_path, summary_path, checkpoint_path, restore=False, scope="model",
-                 lamda=0.7, alpha=0.01, hidden_size=1024, depth=4):
+                 lamda=0.7, alpha=0.01, hidden_size=1024, depth=3):
         self._model_path = model_path
         self._summary_path = summary_path
         self._checkpoint_path = checkpoint_path
