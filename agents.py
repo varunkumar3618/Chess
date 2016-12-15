@@ -49,7 +49,7 @@ class MTDAgent(object):
     """
     An gent with MTD(f) search.
     """
-    def __init__(self, depth, model, name="MTD"):
+    def __init__(self, model, depth=4, name="MTD"):
         self.name = name
         self.depth = depth
         self.alphaBetaCache = collections.defaultdict(dict)

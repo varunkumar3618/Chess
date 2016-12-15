@@ -36,8 +36,8 @@ class Model(object):
             tf.scalar_summary('lambda', lamda)
             tf.scalar_summary('alpha', alpha)
 
-            self._board_t = tf.placeholder(tf.float32, [1, FEATS_LEN], name="board")
-            self._v_next = tf.placeholder(tf.float32, [1, 1], name="n_next")
+            self._board_t = tf.placeholder(tf.float32, [None, FEATS_LEN], name="board")
+            self._v_next = tf.placeholder(tf.float32, [None, 1], name="n_next")
 
             h1 = affine_layer(
                 input_t=self._board_t,
@@ -133,12 +133,12 @@ class Model(object):
 
     def play(self, humanAsWhite=True):
         if humanAsWhite:
-            play(HumanAgent(), MTDAgent(self._depth, self))
+            play(HumanAgent(), MTDAgent(self, self._depth))
         else:
-            play(MTDAgent(self._depth, self), HumanAgent())
+            play(MTDAgent(self, self._depth), HumanAgent())
 
     def test(self, episodes=100):
-        td_agent = MTDAgent(self._depth, self)
+        td_agent = MTDAgent(self, self._depth)
         random_agent = RandomAgent()
 
         wins, losses, draws = 0, 0, 0
@@ -242,46 +242,46 @@ class Model(object):
         validation_interval = 1000
         episodes = 5000
 
-        agent = MTDAgent(self, self._depth, self)
+        agent = MTDAgent(self, self._depth)
         for episode in range(episodes):
             agent.begin_game()
             if episode != 0 and episode % validation_interval == 0:
                 self.test(episodes=100)
 
-                board = chess.Board()
-                board_t = self._extract_features(board)
+            board = chess.Board()
+            board_t = self._extract_features(board)
 
-                game_step = 0
-                while not board.is_game_over():
-                    move = agent.get_move(board)
-                    board.push(move)
+            game_step = 0
+            while not board.is_game_over():
+                move = agent.get_move(board)
+                board.push(move)
 
-                    board_next_t = self._extract_features(board)
-                    v_next = self._get_output(board_next_t)
-                    self._sess.run(self._train_op, feed_dict={ self._board_t: board_t, self._v_next: v_next})
+                board_next_t = self._extract_features(board)
+                v_next = self._get_output(board_next_t)
+                self._sess.run(self._train_op, feed_dict={ self._board_t: board_t, self._v_next: v_next})
 
-                    board_t = board_next_t
-                    game_step += 1
+                board_t = board_next_t
+                game_step += 1
 
-                if board.result() == "1-0":
-                    result = 1
-                    winner_str = "Winner: White"
-                elif board.result() == "0-1":
-                    result = 0
-                    winner_str = "Winner: Black"
-                else:
-                    result = 0.5
-                    winner_str = "Draw"
-                _, global_step, summaries, _ = self._sess.run([
-                    self._train_op,
-                    self._global_step,
-                    self._summaries_op,
-                    self._reset_op
-                ], feed_dict={ self._board_t: board_t, self._v_next: np.array([[result]], dtype="float32") })
-                summary_writer.add_summary(summaries, global_step=global_step)
+            if board.result() == "1-0":
+                result = 1
+                winner_str = "Winner: White"
+            elif board.result() == "0-1":
+                result = 0
+                winner_str = "Winner: Black"
+            else:
+                result = 0.5
+                winner_str = "Draw"
+            _, global_step, summaries, _ = self._sess.run([
+                self._train_op,
+                self._global_step,
+                self._summaries_op,
+                self._reset_op
+            ], feed_dict={ self._board_t: board_t, self._v_next: np.array([[result]], dtype="float32") })
+            summary_writer.add_summary(summaries, global_step=global_step)
 
-                print("Game %d/%d (%s) in %d turns" % (episode, episodes, winner_str, game_step))
-                self._saver.save(self._sess, self._checkpoint_path + "checkpoint", global_step=global_step)
+            print("Game %d/%d (%s) in %d turns" % (episode, episodes, winner_str, game_step))
+            self._saver.save(self._sess, self._checkpoint_path + "checkpoint", global_step=global_step)
 
         summary_writer.close()
         self.test(episodes=1000)
@@ -293,16 +293,18 @@ class Model(object):
                 piece = board.piece_at(8 * rank + file)
                 if piece is not None:
                     piece_color, piece_type = piece.color, piece.piece_type
-                    board_t[piece_color][rank][file][piece_type-1] = 1
+                    piece_color_key = 1 if piece_color is chess.WHITE else 0
+                    board_t[piece_color_key][rank][file][piece_type-1] = 1
 
         props_t = np.zeros((2, 3), dtype="float32")
         for color in [chess.WHITE, chess.BLACK]:
+            color_key = 1 if piece_color is chess.WHITE else 0
             if board.turn == color:
-                props_t[color][0] = 1
+                props_t[color_key][0] = 1
             if board.has_kingside_castling_rights(color):
-                props_t[color][1] = 1
+                props_t[color_key][1] = 1
             if board.has_queenside_castling_rights(color):
-                props_t[color][2] = 1
+                props_t[color_key][2] = 1
 
         return np.expand_dims(np.concatenate((board_t.reshape((2, -1)), props_t), axis=1).flatten(), axis=0)
 
