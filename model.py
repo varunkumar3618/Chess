@@ -232,6 +232,9 @@ class Model(object):
                 print("Game %d/%d (%s) in %d turns" % (episode, episodes, winner_str, game_step))
                 self._saver.save(self._sess, self._checkpoint_path + "checkpoint", global_step=global_step)
 
+                if episode != 0 and episode % 1000 == 0:
+                    self.test(episodes=10)
+
         summary_writer.close()
         self.test(episodes=1000)
 
